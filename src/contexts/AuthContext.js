@@ -1,23 +1,28 @@
-import React, { createContext, useState } from 'react';
+import React, { createContext, useContext, useState } from "react";
 
-export const AuthContext = createContext();
+const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
 
-  const login = (email, password) => {
-    setUser({ email, password }); // <- storing both
+  const login = (userData) => {
+    setUser(userData);
   };
 
   const logout = () => {
     setUser(null);
   };
 
-  const isAuthenticated = !!user;
-
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
 };
+
+// ✅ yeh hook banaya jisse tum Login.js aur Signup.js me useAuth import kar sako
+export const useAuth = () => {
+  return useContext(AuthContext);
+};
+
+export { AuthContext };

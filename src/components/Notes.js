@@ -1,74 +1,80 @@
-import React, { useState } from 'react';
-import { FaEdit, FaTrash, FaStar } from 'react-icons/fa';
+import React, { useState, useEffect } from "react";
+import { getNotes, addNote } from "../services/api";
 
 const Notes = () => {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [date, setDate] = useState('');
   const [notes, setNotes] = useState([]);
+  const [description, setDescription] = useState("");
+  const [date, setDate] = useState("");
 
-  const handleAddNote = (e) => {
+  // ✅ Colors array for note cards
+  const colors = ["#FFC0CB", "#ADD8E6", "#90EE90", "#FFD700", "#FFA07A", "#DDA0DD"];
+
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const data = await getNotes();
+      console.log("Fetched notes:", data); // 🔍 check property names
+      setNotes(Array.isArray(data) ? data : data.notes || []);
+    } catch (error) {
+      console.error("Error fetching notes:", error);
+      setNotes([]);
+    }
+  };
+  fetchData();
+}, []);
+  const handleAdd = async (e) => {
     e.preventDefault();
-    if (!title || !description || !date) return;
-
-    const newNote = {
-      id: Date.now(),
-      title,
-      description,
-      date,
-    };
-
-    setNotes([newNote, ...notes]);
-    setTitle('');
-    setDescription('');
-    setDate('');
+    try {
+      const newNote = await addNote(description, date);
+      // Make sure we add the actual note object
+      const noteToAdd = newNote._id ? newNote : newNote.note || newNote;
+      setNotes([noteToAdd, ...notes]);
+      setDescription("");
+      setDate("");
+    } catch (error) {
+      console.error("Error adding note:", error);
+    }
   };
 
   return (
-    <div className="notes-container">
-      <form onSubmit={handleAddNote} className="notes-form">
-        <h3>Add Note</h3>
-        <input
-          type="text"
-          placeholder="Enter Title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
+    <div>
+      <h2>Notes</h2>
+      <form onSubmit={handleAdd}>
         <textarea
-          placeholder="Write a description..."
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          rows="4"
+          placeholder="Note description"
+          rows={3}
         />
         <input
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
         />
-        <button type="submit">Add Note</button>
+        <button type="submit">Add</button>
       </form>
 
-      <div className="notes-list">
-        {notes.length === 0 ? (
-          <p style={{ textAlign: 'center', color: '#777' }}>No notes yet.</p>
+      {/* ✅ Notes container with 2-row layout */}
+      <div style={{ display: "flex", flexWrap: "wrap" }}>
+        {notes.length > 0 ? (
+      notes.map((note, index) => (
+  <div
+    key={note._id}
+    style={{
+      backgroundColor: colors[index % colors.length],
+      padding: "10px",
+      margin: "10px",
+      borderRadius: "8px",
+      width: "200px",
+    }}
+  >
+    {/* Check for description, text, or note */}
+    <p>{note.description || note.text || note.note}</p>
+    <p>{note.date}</p>
+  </div>
+))
         ) : (
-          notes.map((note) => (
-            <div key={note.id} className="note-card">
-              {/* ⭐ Favorite icon - top right */}
-              <FaStar title="Favorite" className="icon favorite-icon" />
-
-              {/* Note content */}
-              <h4>{note.title}</h4>
-              <p>{note.description}</p>
-              <p className="note-date">📅 {note.date}</p>
-
-              {/* 🖊️ Edit + 🗑️ Delete icons - bottom right */}
-              <div className="note-actions-bottom">
-                <FaEdit title="Edit" className="icon edit" />
-                <FaTrash title="Delete" className="icon delete" />
-              </div>
-            </div>
-          ))
+          <p>No notes available</p>
         )}
       </div>
     </div>
@@ -76,5 +82,4 @@ const Notes = () => {
 };
 
 export default Notes;
-
 
