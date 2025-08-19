@@ -1,85 +1,120 @@
-import React, { useState, useEffect } from "react";
-import { getNotes, addNote } from "../services/api";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import "./Notes.css";
 
-const Notes = () => {
+export default function Notes() {
   const [notes, setNotes] = useState([]);
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
+  const [editId, setEditId] = useState(null);
 
-  // ✅ Colors array for note cards
-  const colors = ["#FFC0CB", "#ADD8E6", "#90EE90", "#FFD700", "#FFA07A", "#DDA0DD"];
+  const token = localStorage.getItem("token");
 
-useEffect(() => {
-  const fetchData = async () => {
+  // Fetch notes
+  useEffect(() => {
+    axios
+      .get("http://localhost:5000/api/notes", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => setNotes(res.data))
+      .catch((err) => {
+        if (err.response?.status === 401) {
+          alert("Session expired, please login again");
+          localStorage.removeItem("token");
+          window.location.href = "/login";
+        }
+      });
+  }, [token]);
+
+  // Create/Update
+  const saveNote = async () => {
+    if (!description || !date) return alert("Please enter description & date");
+
     try {
-      const data = await getNotes();
-      console.log("Fetched notes:", data); // 🔍 check property names
-      setNotes(Array.isArray(data) ? data : data.notes || []);
-    } catch (error) {
-      console.error("Error fetching notes:", error);
-      setNotes([]);
-    }
-  };
-  fetchData();
-}, []);
-  const handleAdd = async (e) => {
-    e.preventDefault();
-    try {
-      const newNote = await addNote(description, date);
-      // Make sure we add the actual note object
-      const noteToAdd = newNote._id ? newNote : newNote.note || newNote;
-      setNotes([noteToAdd, ...notes]);
+      if (editId) {
+        const res = await axios.put(
+          `http://localhost:5000/api/notes/${editId}`,
+          { description, date },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setNotes((prev) => prev.map((n) => (n._id === editId ? res.data : n)));
+        setEditId(null);
+      } else {
+        const res = await axios.post(
+          "http://localhost:5000/api/notes",
+          { description, date },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setNotes((prev) => [res.data, ...prev]);
+      }
+
       setDescription("");
       setDate("");
-    } catch (error) {
-      console.error("Error adding note:", error);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const startEdit = (note) => {
+    setDescription(note.description);
+    setDate(note.date?.slice(0, 10) || "");
+    setEditId(note._id);
+  };
+
+  const deleteNote = async (id) => {
+    try {
+      await axios.delete(`http://localhost:5000/api/notes/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setNotes((prev) => prev.filter((n) => n._id !== id));
+    } catch (err) {
+      console.error(err);
     }
   };
 
   return (
-    <div>
-      <h2>Notes</h2>
-      <form onSubmit={handleAdd}>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Note description"
-          rows={3}
-        />
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-        />
-        <button type="submit">Add</button>
-      </form>
+    <div className="notes-container">
+      <div className="header">
+        <div className="input-row">
+          <input
+            type="text"
+            placeholder="Write a note..."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && saveNote()}
+          />
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
+        </div>
+        <button className="add-btn" onClick={saveNote}>
+          {editId ? "Update" : "Add"}
+        </button>
+      </div>
 
-      {/* ✅ Notes container with 2-row layout */}
-      <div style={{ display: "flex", flexWrap: "wrap" }}>
-        {notes.length > 0 ? (
-      notes.map((note, index) => (
-  <div
-    key={note._id}
-    style={{
-      backgroundColor: colors[index % colors.length],
-      padding: "10px",
-      margin: "10px",
-      borderRadius: "8px",
-      width: "200px",
-    }}
-  >
-    {/* Check for description, text, or note */}
-    <p>{note.description || note.text || note.note}</p>
-    <p>{note.date}</p>
-  </div>
-))
-        ) : (
-          <p>No notes available</p>
-        )}
+      <div className="notes-grid">
+        {notes.map((note) => (
+          <div className="note-card" key={note._id}>
+            <p className="note-text">{note.description}</p>
+            <span className="note-date">
+              {note.date ? new Date(note.date).toLocaleDateString() : "—"}
+            </span>
+            <div className="card-actions">
+              <button className="btn" onClick={() => startEdit(note)}>
+                Edit
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={() => deleteNote(note._id)}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
-};
-
-export default Notes;
-
+}

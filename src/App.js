@@ -1,13 +1,12 @@
-import React, { useContext } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Signup from './components/Signup';
-import Login from './components/Login';
-import Dashboard from './Dashboard';
-import PrivateRoute from './components/PrivateRoute';
-import { AuthProvider, AuthContext } from './contexts/AuthContext';
-import Notes from './components/Notes';
+import React, { useContext } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import Signup from "./components/Signup";
+import Login from "./components/Login";
+import Notes from "./components/Notes";
+import PrivateRoute from "./components/PrivateRoute";
+import { AuthProvider, AuthContext } from "./contexts/AuthContext";
 
-// DefaultRoute component — checks if user logged in
+// DefaultRoute component
 const DefaultRoute = () => {
   const { user } = useContext(AuthContext);
   return user ? <Navigate to="/notes" /> : <Navigate to="/login" />;
@@ -20,24 +19,13 @@ function App() {
         <Routes>
           <Route path="/signup" element={<Signup />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/notes" element={<Notes />} />
 
-       {/* Notes is now protected
+          {/* Notes protected */}
           <Route
             path="/notes"
             element={
               <PrivateRoute>
                 <Notes />
-              </PrivateRoute>
-            }    
-          />   */}
-
-          {/* Dashboard also protected */}
-          <Route
-            path="/dashboard"
-            element={
-              <PrivateRoute>
-                <Dashboard />
               </PrivateRoute>
             }
           />
